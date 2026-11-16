@@ -4,6 +4,7 @@ O Exchange limita quantos itens ficam abertos ao mesmo tempo. Por isso o índice
 apenas metadados (EntryID, data, categorias) e cada mensagem é aberta sob demanda.
 """
 from .config import LOJA, PASTA_ENTRADA, PASTA_ENVIADOS
+from .progresso import emitir
 from .util import local
 
 
@@ -48,7 +49,7 @@ def indexar(pasta, rotulo, corte):
             indice.setdefault(item.ConversationID, []).append(registro)
         except Exception:
             erros += 1
-    print(f"  {rotulo}: {lidos} mensagens desde {corte:%d/%m/%Y}, "
+    emitir(f"  {rotulo}: {lidos} mensagens desde {corte:%d/%m/%Y}, "
           f"{len(indice)} conversas, {erros} erros")
     return indice
 

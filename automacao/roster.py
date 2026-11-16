@@ -3,12 +3,12 @@ import csv
 
 from rapidfuzz import fuzz, process
 
-from .config import CATEGORIAS_NAO_PESSOA, ROSTER
+from .config import CATEGORIAS_NAO_PESSOA, garantir_roster
 from .util import norm
 
 
 def carregar():
-    with open(ROSTER, encoding="utf-8", newline="") as f:
+    with open(garantir_roster(), encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
 
 

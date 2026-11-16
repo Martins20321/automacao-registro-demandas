@@ -45,6 +45,12 @@ def test_encaminhamento_ignora_indices():
     assert a.tipo == "encaminhamento"
 
 
+def test_conclusao_e_sempre_a_ultima_resposta_enviada():
+    # a IA apontou a 1ª resposta (índice 1), mas existe uma 2ª resposta enviada (índice 2)
+    a = ia.analisar(_msgs(enviadas=2), Falso(indice_conclusao=1))
+    assert a.indice_conclusao == 2
+
+
 def test_sem_resposta_util_nao_e_registrado():
     a = ia.analisar(_msgs(), Falso(tipo="sem_resposta_util", indice_conclusao=0))
     assert a.tipo in ia.NAO_REGISTRADOS

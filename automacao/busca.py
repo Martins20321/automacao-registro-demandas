@@ -8,12 +8,13 @@ from datetime import timedelta
 
 from . import assinatura, outlook
 from .config import CATEGORIA_FEITO, DOMINIO_INTERNO
+from .progresso import emitir
 from .roster import categoria_do_operador
 
 
 def buscar(ns, operador, desde, roster, margem_dias=90, verificar_todas=True):
     entrada, enviados = outlook.abrir_pastas(ns)
-    print("Indexando mensagens...")
+    emitir("Lendo o Outlook (pode levar alguns minutos)...")
     idx_in = outlook.indexar(entrada, "entrada", desde - timedelta(days=margem_dias))
     idx_out = outlook.indexar(enviados, "enviados", desde)
     cache = assinatura.carregar_cache()
@@ -29,7 +30,7 @@ def buscar(ns, operador, desde, roster, margem_dias=90, verificar_todas=True):
 
     fase1 = [c for c in candidatas if c[4]]
     fase2 = [c for c in candidatas if not c[4]] if verificar_todas else []
-    print(f"Conversas 'Feito' com resposta desde {desde:%d/%m/%Y}: {len(candidatas)} "
+    emitir(f"Conversas 'Feito' com resposta desde {desde:%d/%m/%Y}: {len(candidatas)} "
           f"({len(fase1)} com a categoria do estagiário, {len(fase2)} a verificar pela assinatura)")
 
     demandas, descartadas = [], 0

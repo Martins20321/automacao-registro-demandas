@@ -13,8 +13,10 @@ from typing import Protocol
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from .config import RAIZ
+from . import envfile
+from .config import ARQUIVO_ENV
 from .modelos import AnaliseIA, MensagemConversa
+from .progresso import emitir
 
 INSTRUCOES = """Você analisa conversas de e-mail do suporte de TI do Ministério de Minas e Energia (MME).
 A equipe cuida do portal institucional (Plone, chamado "Portal") e do sistema de Consultas Públicas.
@@ -53,9 +55,11 @@ Classifique o campo "tipo":
 - "outra": qualquer outra tarefa (modificar página, incluir ou apagar conteúdo, criar algo etc.).
 Não decida a complexidade: o programa a define pela tarefa.
 
+A resposta de conclusão ("indice_conclusao") é SEMPRE a ÚLTIMA mensagem enviada da conversa. Em
+"providencia" descreva o que a equipe fez, com base nessa última resposta (as anteriores servem só de
+contexto: por exemplo, se a equipe primeiro pediu dados e depois executou, a providência é a execução).
 Se a conversa tiver várias solicitações, escolha a ÚLTIMA solicitação real do usuário
-("indice_solicitacao") e a resposta enviada logo seguinte a ela ("indice_conclusao").
-Mensagens de agradecimento não são solicitações. Se houver duas respostas iguais de conclusão, use a última.
+("indice_solicitacao"), anterior à conclusão. Mensagens de agradecimento não são solicitações.
 
 "solicitacao": o que foi pedido, começando direto pelo núcleo do pedido, SEM sujeito e SEM o verbo
 "solicitou". Exemplo certo: "a inclusão do nome [PESSOA_2] na página da Secretaria". Exemplo errado: "o usuário
@@ -85,19 +89,27 @@ class ProvedorLLM(Protocol):
 MODELO_PADRAO = "openai/gpt-oss-120b"
 
 
+def chave_configurada():
+    load_dotenv(ARQUIVO_ENV)
+    return bool(os.getenv("GROQ_API_KEY", "").strip())
+
+
+def salvar_chave(chave):
+    """Guarda a chave no .env (só neste computador) e no ambiente do programa."""
+    chave = chave.strip()
+    envfile.salvar(ARQUIVO_ENV, {"GROQ_API_KEY": chave})
+    os.environ["GROQ_API_KEY"] = chave
+
+
 def _obter_chave():
-    """Lê a chave do .env; na primeira execução, pede ao operador e guarda só neste computador."""
-    load_dotenv(RAIZ / ".env")
-    chave = os.getenv("GROQ_API_KEY", "").strip()
-    if chave or not sys.stdin.isatty():
-        return chave
+    """Lê a chave do .env; no terminal, na primeira execução, pede ao operador."""
+    if chave_configurada() or not sys.stdin or not sys.stdin.isatty():
+        return os.getenv("GROQ_API_KEY", "").strip()
     print("\nPrimeira execução: informe a chave da API do Groq (console.groq.com).")
     print("Ela fica guardada só neste computador, no arquivo .env, e não aparece na tela.")
     chave = getpass.getpass("Chave do Groq: ").strip()
     if chave:
-        with open(RAIZ / ".env", "a", encoding="utf-8") as f:
-            f.write(f"\nGROQ_API_KEY={chave}\n")
-        os.environ["GROQ_API_KEY"] = chave
+        salvar_chave(chave)
     return chave
 
 
@@ -123,7 +135,7 @@ class ProvedorGroq:
                 if tentativa == 4:
                     raise
                 espera = 15 * tentativa
-                print(f"  (limite de requisições do Groq; aguardando {espera}s)")
+                emitir(f"  (limite de requisições do Groq; aguardando {espera}s)")
                 time.sleep(espera)
 
 
@@ -150,6 +162,10 @@ def analisar(mensagens: list[MensagemConversa], provedor: ProvedorLLM) -> Analis
         indices = {m.indice: m for m in mensagens}
         sol, con = indices.get(analise.indice_solicitacao), indices.get(analise.indice_conclusao)
         if sol and con and sol.direcao == "recebida" and con.direcao == "enviada" and con.data >= sol.data:
+            # A conclusão é sempre a última resposta enviada (a mesma usada para ler a assinatura)
+            ultima = max((m for m in mensagens if m.direcao == "enviada"), key=lambda m: m.indice)
+            if ultima.indice != analise.indice_conclusao and ultima.data >= sol.data:
+                analise = analise.model_copy(update={"indice_conclusao": ultima.indice})
             return analise
         ultimo_erro = ValueError("índices de solicitação/conclusão inconsistentes")
     # Reserva: conversa simples (uma só resposta enviada) usa a regra fixa, marcada com confiança baixa

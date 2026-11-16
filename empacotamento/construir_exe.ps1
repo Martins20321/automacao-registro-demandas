@@ -1,45 +1,51 @@
-# Gera dist\registro-demandas\ (e o .zip) com o executável e tudo de que ele precisa.
+# Gera o programa com janelas (sem terminal) e o .zip para publicar.
 # Uso (na raiz do projeto):
 #   powershell -ExecutionPolicy Bypass -File empacotamento\construir_exe.ps1 [-IncluirLista]
+# Resultado: dist\Registro-de-Demandas.zip  (contém a pasta "Registro de Demandas" com o .exe)
 param([switch]$IncluirLista)
 $ErrorActionPreference = "Stop"
 $raiz = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $raiz
-$py = ".\.venv\Scripts\python.exe"
-$nome = "registro-demandas"
-
-& $py -m pip install -q -r requirements-dev.txt
-& $py -m PyInstaller --noconfirm --clean --onedir --console --name $nome `
-    --specpath build --hidden-import win32timezone buscar_demandas.py
-if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou" }
-
-$dest = "dist\$nome"
-
-# Tesseract: só o executável e as DLLs (sem ferramentas de treino nem documentação)
+$py = Join-Path $raiz ".venv\Scripts\python.exe"
+$nome = "Registro de Demandas"
 $tess = "C:\Program Files\Tesseract-OCR"
 if (-not (Test-Path "$tess\tesseract.exe")) { throw "Tesseract não encontrado em $tess" }
-New-Item -ItemType Directory -Force "$dest\tesseract" | Out-Null
-Copy-Item "$tess\tesseract.exe" "$dest\tesseract\"
-Copy-Item "$tess\*.dll" "$dest\tesseract\"
 
-# Idioma português, lista de estagiários, configuração e instruções
-Copy-Item "tessdata" "$dest\tessdata" -Recurse -Force
-New-Item -ItemType Directory -Force "$dest\config" | Out-Null
-Copy-Item ".env.example" "$dest\.env.example"
+& $py -m pip install -q -r requirements-dev.txt
+
+# Tesseract: só o executável e as DLLs (sem ferramentas de treino nem documentação)
+$stage = Join-Path $raiz "build\tesseract_embutido"
+if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+New-Item -ItemType Directory -Force $stage | Out-Null
+Copy-Item "$tess\tesseract.exe" $stage
+Copy-Item "$tess\*.dll" $stage
+
+# Programa com janelas (--windowed: não abre terminal). Os recursos ficam DENTRO do programa.
+& $py -m PyInstaller --noconfirm --clean --onedir --windowed --name $nome --specpath build `
+    --hidden-import win32timezone `
+    --add-data "$raiz\tessdata;tessdata" `
+    --add-data "$raiz\config\estagiarios.exemplo.csv;config" `
+    registro_demandas.py
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou" }
+
+$dest = Join-Path $raiz "dist\$nome"
+# O Tesseract é copiado DEPOIS (não via --add-data, que duplicaria as DLLs na raiz do programa)
+Copy-Item $stage "$dest\_internal\tesseract" -Recurse
 Copy-Item "empacotamento\LEIA-ME.txt" "$dest\LEIA-ME.txt"
 
 if ($IncluirLista) {
-    # Pacote INTERNO: lista real e .env do órgão, SEM a chave da IA. Não publicar.
-    if (Test-Path "config\estagiarios.csv") { Copy-Item "config\estagiarios.csv" "$dest\config\" }
+    # Pacote INTERNO: leva a lista real e a configuração do órgão (SEM a chave da IA).
+    # Na primeira execução o programa copia esses arquivos para a pasta de dados do usuário. NÃO publicar.
+    $ini = "$dest\configuracao-inicial"
+    New-Item -ItemType Directory -Force $ini | Out-Null
+    if (Test-Path "config\estagiarios.csv") { Copy-Item "config\estagiarios.csv" "$ini\" }
     if (Test-Path ".env") {
         Get-Content ".env" -Encoding UTF8 | Where-Object { $_ -notmatch '^\s*GROQ_API_KEY' } |
-            Set-Content "$dest\.env" -Encoding UTF8
+            Set-Content "$ini\.env" -Encoding UTF8
     }
-} else {
-    # Pacote PÚBLICO: só exemplos
-    Copy-Item "config\estagiarios.exemplo.csv" "$dest\config\estagiarios.csv"
 }
 
-if (Test-Path "dist\$nome.zip") { Remove-Item "dist\$nome.zip" -Force }
-Compress-Archive -Path $dest -DestinationPath "dist\$nome.zip" -CompressionLevel Optimal
-Write-Host "Pronto: $dest  e  dist\$nome.zip"
+$zip = Join-Path $raiz "dist\Registro-de-Demandas.zip"
+if (Test-Path $zip) { Remove-Item $zip -Force }
+Compress-Archive -Path $dest -DestinationPath $zip -CompressionLevel Optimal
+Write-Host "Pronto: $zip"

@@ -9,6 +9,17 @@ def norm(texto):
     return re.sub(r"\s+", " ", sem_acento).strip().lower()
 
 
+def ler_data(texto):
+    """Aceita dd/mm/aaaa ou aaaa-mm-dd."""
+    from datetime import datetime
+    for formato in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(texto.strip(), formato)
+        except ValueError:
+            pass
+    raise ValueError(f"Data inválida: '{texto}'. Use dd/mm/aaaa.")
+
+
 def local(dt):
     """pywin32 devolve o horário local marcado como UTC: só remove a marca."""
     return dt.replace(tzinfo=None)

@@ -1,0 +1,9 @@
+pywin32
+pillow
+pytesseract
+rapidfuzz
+beautifulsoup4
+lxml
+pydantic
+groq
+python-dotenv

@@ -1,0 +1,32 @@
+AUTOMAÇÃO DE REGISTRO DE DEMANDAS (Outlook -> SharePoint)
+
+REQUISITOS
+- Windows com o Outlook CLÁSSICO aberto e logado, com a caixa compartilhada no painel esquerdo.
+- Chave da API do Groq (https://console.groq.com/keys). O programa pede na primeira execução.
+
+CONFIGURAÇÃO (uma vez)
+1. Se não existir o arquivo .env nesta pasta, copie .env.example para .env e preencha:
+   OUTLOOK_ARMAZENAMENTO, DOMINIO_INTERNO, CLIENTE_CONSULTAS_PUBLICAS e CLIENTE_PORTAL_EXTERNO.
+   (LISTA_URL é opcional: abre a lista no navegador ao final.)
+2. Confira config\estagiarios.csv: lista oficial (colunas nome,email; nome sem acento).
+
+COMO USAR
+1. Abra o Outlook clássico.
+2. (Recomendado) Na lista do SharePoint: Exportar > Exportar para CSV. Serve para evitar duplicidade.
+3. Dê dois cliques em registro-demandas.exe.
+4. Informe seu e-mail institucional, seu nome completo e a data inicial (dd/mm/aaaa).
+5. Quando perguntar, informe o caminho do CSV exportado (ou ENTER para pular).
+6. Confira a prévia. Digite o número de uma demanda para editar, "x N" para remover, ou ENTER para
+   confirmar. Para enviar, digite "sim".
+7. As linhas ficam copiadas. Na lista do SharePoint: "Editar no modo de exibição de grade",
+   clique na primeira célula vazia da coluna Problema e pressione Ctrl+V.
+
+EXEMPLO (pelo terminal, sem perguntas)
+   registro-demandas.exe --email maria.silva@orgao.gov.br --nome "Maria Exemplo da Silva" --desde 01/11/2026
+
+ARQUIVOS
+- .env : configuração do órgão e chave do Groq (a chave é gravada na primeira execução).
+- config\estagiarios.csv : lista oficial.
+- saida\ : prévias e arquivos para colar gerados a cada execução.
+
+Em caso de problema, copie a mensagem exibida na tela e envie ao desenvolvedor.

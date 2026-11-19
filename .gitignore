@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Dados e segredos locais (nunca versionar)
+.env
+dados/
+saida/
+config/estagiarios.csv
+ultimo_operador.json
+
+# Geração do executável
+build/
+dist/

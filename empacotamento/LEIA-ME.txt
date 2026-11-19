@@ -1,0 +1,33 @@
+REGISTRO DE DEMANDAS (Outlook -> SharePoint)
+
+INSTALAÇÃO
+1. Extraia este .zip em uma pasta sua (por exemplo, em Documentos). Não execute de dentro do zip.
+2. Dê dois cliques em "Registro de Demandas.exe". Não precisa instalar nada.
+   (Se o Windows avisar sobre "editor desconhecido": Mais informações > Executar assim mesmo.
+   O aviso aparece porque o programa não é assinado digitalmente.)
+
+PRIMEIRO USO
+O programa abre a tela de Configurações. Preencha:
+ - Nome da caixa compartilhada (exatamente como aparece no painel esquerdo do Outlook clássico)
+ - Domínio dos e-mails internos (ex.: @orgao.gov.br)
+ - Cliente de demandas externas de Consultas Públicas e do portal
+ - Chave da API do Groq (grátis em https://console.groq.com/keys)
+Clique em "Editar lista de estagiários" e informe nome (sem acento) e e-mail de cada pessoa.
+Salve: o programa reabre sozinho.
+
+COMO USAR
+1. Abra o Outlook CLÁSSICO, com a caixa compartilhada visível. (O novo Outlook não funciona.)
+2. (Recomendado) Na lista do SharePoint: Exportar > Exportar para CSV.
+3. No programa: informe seu e-mail, seu nome e a data inicial; selecione o CSV; clique em
+   "Buscar minhas demandas". Aguarde alguns minutos.
+4. Confira a prévia. Clique em uma demanda para editar os campos, ou em "Não incluir".
+5. Clique em "Confirmar e copiar para o SharePoint".
+6. Na lista do SharePoint: "Editar no modo de exibição de grade", clique na primeira célula vazia
+   da coluna Problema e pressione Ctrl+V.
+
+ONDE FICAM OS DADOS
+Configurações, lista de estagiários e arquivos gerados ficam em %APPDATA%\RegistroDemandas
+(botão "Pasta dos arquivos" abre a pasta de saída). Para desinstalar, apague a pasta do programa
+e, se quiser, essa pasta de dados.
+
+Em caso de problema, envie ao desenvolvedor o arquivo saida\erro.log (se existir) ou a mensagem exibida.

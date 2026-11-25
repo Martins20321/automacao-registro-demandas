@@ -13,7 +13,7 @@ import traceback
 import webbrowser
 import tkinter as tk
 from datetime import datetime
-from tkcalendar import DateEntry
+from tkcalendar import Calendar
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -113,9 +113,12 @@ class App(tk.Tk):
             ttk.Entry(form, textvariable=var, width=46).grid(row=i, column=1, sticky="w", pady=6)
         ttk.Label(form, text="Buscar demandas concluídas desde").grid(
             row=2, column=0, sticky="w", pady=6, padx=(0, 16))
-        DateEntry(form, textvariable=self.var_desde, date_pattern="dd/mm/yyyy", locale="pt_BR",
-                  width=14, firstweekday="sunday", maxdate=datetime.now()).grid(
-            row=2, column=1, sticky="w", pady=6)
+        linha_data = ttk.Frame(form)
+        linha_data.grid(row=2, column=1, sticky="w", pady=6)
+        ttk.Entry(linha_data, textvariable=self.var_desde, width=14).pack(side="left")
+        ttk.Button(linha_data, text="Escolher no calendário…",
+                   command=self._escolher_data).pack(side="left", padx=(8, 0))
+        ttk.Label(linha_data, text="(ou digite dd/mm/aaaa)", style="Muted.TLabel").pack(side="left", padx=(10, 0))
         ttk.Label(form, text="CSV exportado da lista (opcional, evita duplicados)").grid(
             row=3, column=0, sticky="w", pady=6, padx=(0, 16))
         linha_csv = ttk.Frame(form)
@@ -137,6 +140,42 @@ class App(tk.Tk):
                       "• Se o Outlook pedir permissão de acesso, clique em permitir."):
             ttk.Label(dica, text=texto, style="Muted.TLabel").pack(anchor="w", pady=2)
         return tela
+
+    def _escolher_data(self):
+        """Abre o calendário numa janela própria (o menu suspenso do DateEntry fechava ao trocar de mês)."""
+        hoje = datetime.now().date()
+        try:
+            atual = ler_data(self.var_desde.get()).date()
+        except ValueError:
+            atual = hoje
+        janela = tk.Toplevel(self)
+        janela.title("Escolher a data inicial")
+        janela.configure(bg=BG)
+        janela.transient(self)
+        janela.resizable(False, False)
+        cal = Calendar(janela, selectmode="day", locale="pt_BR", date_pattern="dd/mm/yyyy",
+                       year=atual.year, month=atual.month, day=atual.day, maxdate=hoje,
+                       firstweekday="sunday", font=("Segoe UI", 10))
+        cal.pack(padx=16, pady=(16, 8))
+
+        def escolher(_evento=None):
+            self.var_desde.set(cal.get_date())
+            janela.destroy()
+
+        def usar_hoje():
+            self.var_desde.set(hoje.strftime("%d/%m/%Y"))
+            janela.destroy()
+
+        cal.bind("<<CalendarSelected>>", escolher)      # clicar no dia escolhe e fecha
+        botoes = ttk.Frame(janela)
+        botoes.pack(fill="x", padx=16, pady=(0, 14))
+        ttk.Button(botoes, text="Hoje", command=usar_hoje).pack(side="left")
+        ttk.Button(botoes, text="Cancelar", command=janela.destroy).pack(side="right")
+        janela.update_idletasks()
+        x = self.winfo_rootx() + 140
+        y = self.winfo_rooty() + 160
+        janela.geometry(f"+{x}+{y}")
+        janela.grab_set()
 
     def _procurar_csv(self):
         caminho = filedialog.askopenfilename(title="Selecione o CSV exportado da lista",
@@ -475,8 +514,15 @@ class App(tk.Tk):
                 elif tipo == "ok":
                     self.barra.stop()
                     self.resultado = valor
-                    self._preencher_previa()
-                    self.mostrar("previa")
+                    if not (valor.registros or valor.ignoradas or valor.falhas):
+                        self.mostrar("inicio")
+                        messagebox.showinfo(
+                            "Nenhuma demanda encontrada",
+                            self.texto_resultado_vazio(self.var_desde.get(), self._linhas_do_log()),
+                            parent=self)
+                    else:
+                        self._preencher_previa()
+                        self.mostrar("previa")
                 elif tipo == "erro":
                     self.barra.stop()
                     self.mostrar("inicio")
@@ -484,6 +530,25 @@ class App(tk.Tk):
         except queue.Empty:
             pass
         self.after(150, self._poll)
+
+    def _linhas_do_log(self):
+        return self.log.get("1.0", "end").strip().splitlines()
+
+    @staticmethod
+    def texto_resultado_vazio(desde, linhas_log):
+        """Explica por que a busca voltou vazia (em vez de mostrar uma prévia com zeros)."""
+        resumo = [l.strip() for l in linhas_log
+                  if "mensagens desde" in l or l.startswith("Conversas 'Feito'")]
+        partes = [f"Nenhuma demanda sua foi encontrada desde {desde}."]
+        if resumo:
+            partes.append("O que o programa leu:\n" + "\n".join("  " + l for l in resumo))
+        dicas = ["Escolha uma data inicial anterior (por exemplo, o primeiro dia do mês). A data padrão é "
+                 "hoje, e só entram conversas cuja resposta de conclusão foi enviada a partir da data escolhida."]
+        if any(l.strip().startswith("entrada: 0 mensagens") for l in linhas_log):
+            dicas.append("A Caixa de Entrada veio vazia: confira em Configurações > Testar instalação se é a "
+                         "caixa certa.")
+        partes.append("O que fazer:\n" + "\n".join("• " + d for d in dicas))
+        return "\n\n".join(partes)
 
     @staticmethod
     def _explicar(erro):

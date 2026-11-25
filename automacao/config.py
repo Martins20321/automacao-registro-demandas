@@ -93,6 +93,7 @@ def _cfg(nome):
 
 # --- Específicos do órgão (definidos no .env) ---
 LOJA = _cfg("OUTLOOK_ARMAZENAMENTO")                  # nome da caixa compartilhada no painel do Outlook
+CAIXA_EMAIL = _cfg("OUTLOOK_EMAIL")                   # opcional: e-mail da caixa, se ela só aparece por permissão
 DOMINIO_INTERNO = _cfg("DOMINIO_INTERNO")             # ex.: @orgao.gov.br
 CLIENTE_CP = _cfg("CLIENTE_CONSULTAS_PUBLICAS")       # Cliente de demandas externas de Consultas Públicas
 CLIENTE_PORTAL = _cfg("CLIENTE_PORTAL_EXTERNO")       # Cliente de demandas externas do portal

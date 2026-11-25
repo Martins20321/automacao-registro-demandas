@@ -12,7 +12,8 @@ import threading
 import traceback
 import webbrowser
 import tkinter as tk
-from datetime import datetime, timedelta
+from datetime import datetime
+from tkcalendar import DateEntry
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -97,7 +98,7 @@ class App(tk.Tk):
         ultimo = self._ler_ultimo()
         self.var_email = tk.StringVar(value=ultimo.get("email", ""))
         self.var_nome = tk.StringVar(value=ultimo.get("nome", ""))
-        self.var_desde = tk.StringVar(value=(datetime.now() - timedelta(days=30)).strftime("%d/%m/%Y"))
+        self.var_desde = tk.StringVar(value=datetime.now().strftime("%d/%m/%Y"))
         self.var_csv = tk.StringVar()
         self.var_todas = tk.BooleanVar(value=True)
 
@@ -105,11 +106,16 @@ class App(tk.Tk):
                   style="Muted.TLabel").pack(anchor="w", pady=(0, 14))
         form = ttk.Frame(tela)
         form.pack(anchor="w")
-        linhas = [("Seu e-mail institucional", self.var_email), ("Seu nome completo", self.var_nome),
-                  ("Buscar demandas concluídas desde (dd/mm/aaaa)", self.var_desde)]
+        linhas = [("Seu e-mail institucional", self.var_email),
+                  ("Seu nome completo (com ou sem acento)", self.var_nome)]
         for i, (rotulo, var) in enumerate(linhas):
             ttk.Label(form, text=rotulo).grid(row=i, column=0, sticky="w", pady=6, padx=(0, 16))
             ttk.Entry(form, textvariable=var, width=46).grid(row=i, column=1, sticky="w", pady=6)
+        ttk.Label(form, text="Buscar demandas concluídas desde").grid(
+            row=2, column=0, sticky="w", pady=6, padx=(0, 16))
+        DateEntry(form, textvariable=self.var_desde, date_pattern="dd/mm/yyyy", locale="pt_BR",
+                  width=14, firstweekday="sunday", maxdate=datetime.now()).grid(
+            row=2, column=1, sticky="w", pady=6)
         ttk.Label(form, text="CSV exportado da lista (opcional, evita duplicados)").grid(
             row=3, column=0, sticky="w", pady=6, padx=(0, 16))
         linha_csv = ttk.Frame(form)
@@ -483,7 +489,7 @@ class App(tk.Tk):
     def _explicar(erro):
         texto = str(erro) or repr(erro)
         if "Armazenamento" in texto:
-            texto += "\n\nConfira o nome da caixa em Configurações e se ela aparece no painel do Outlook clássico."
+            pass  # a própria mensagem já lista as caixas encontradas e o que fazer
         elif "Dispatch" in texto or "com_error" in texto or "Outlook" in texto:
             texto += "\n\nVerifique se o Outlook CLÁSSICO está aberto (o novo Outlook não funciona)."
         return texto
@@ -505,6 +511,7 @@ class App(tk.Tk):
         janela.grab_set()
         campos = [
             ("OUTLOOK_ARMAZENAMENTO", "Nome da caixa compartilhada (como aparece no painel do Outlook)", False),
+            ("OUTLOOK_EMAIL", "E-mail da caixa (só se ela NÃO aparecer como conta própria no Outlook)", False),
             ("DOMINIO_INTERNO", "Domínio dos e-mails internos (ex.: @orgao.gov.br)", False),
             ("CLIENTE_CONSULTAS_PUBLICAS", "Cliente de demandas externas de Consultas Públicas", False),
             ("CLIENTE_PORTAL_EXTERNO", "Cliente de demandas externas do portal", False),

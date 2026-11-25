@@ -55,6 +55,13 @@ def executar():
                     ok_email = bool(passos) and passos[-1].startswith("Itens Enviados encontrados")
                     partes.append("tentativa pelo e-mail da caixa: " + " | ".join(passos))
                     registrar(f"Caixa '{config.LOJA}' no perfil do Outlook", ok_email, " — ".join(partes))
+                try:
+                    entrada, enviados = outlook.abrir_pastas(ns)
+                    registrar("Pastas da caixa abertas", True,
+                              f"Caixa de Entrada com {entrada.Items.Count} item(ns), "
+                              f"Itens Enviados com {enviados.Items.Count} item(ns)")
+                except Exception as erro:
+                    registrar("Pastas da caixa abertas", False, str(erro)[:300])
         finally:
             pythoncom.CoUninitialize()
     except Exception as erro:

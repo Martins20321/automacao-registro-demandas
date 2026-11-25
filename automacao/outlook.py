@@ -53,36 +53,58 @@ def _pasta_enviados_irma(pasta_entrada):
     return None
 
 
-def _por_caixa_compartilhada(ns):
-    """Caixa aberta por PERMISSÃO (sem aparecer como conta própria no Outlook): usa o e-mail dela."""
-    if not CAIXA_EMAIL:
-        return None
+def diagnosticar_caixa_compartilhada(ns, email):
+    """Tenta abrir a caixa pelo e-mail (GetSharedDefaultFolder). Devolve (entrada, enviados, passos).
+
+    entrada/enviados vêm None se a etapa correspondente falhar; `passos` traz uma linha por etapa,
+    incluindo o motivo exato de qualquer falha (para diagnóstico, nunca falha em silêncio).
+    """
+    passos = []
+    if not email:
+        return None, None, ["e-mail da caixa não foi informado (OUTLOOK_EMAIL, em Configurações)"]
     try:
-        destinatario = ns.CreateRecipient(CAIXA_EMAIL)
+        destinatario = ns.CreateRecipient(email)
         destinatario.Resolve()
-        if not destinatario.Resolved:
-            return None
+    except Exception as erro:
+        return None, None, [f"erro ao resolver o e-mail '{email}': {erro}"]
+    if not destinatario.Resolved:
+        return None, None, [f"o Outlook não resolveu '{email}' a nenhum destinatário "
+                            "(confira se o e-mail está certo e se este computador enxerga o catálogo de endereços)"]
+    passos.append(f"e-mail '{email}' resolvido no catálogo de endereços")
+    try:
         entrada = ns.GetSharedDefaultFolder(destinatario, PASTA_ENTRADA)
-        enviados = _pasta_enviados_irma(entrada)
-        return (entrada, enviados) if enviados is not None else None
-    except Exception:
-        return None
+        total = entrada.Items.Count  # força abrir de verdade: erro de permissão aparece aqui
+    except Exception as erro:
+        return None, None, passos + [
+            f"sem permissão para abrir a Caixa de Entrada dessa caixa: {erro}. "
+            "Peça ao TI acesso 'Leitor' (ou Full Access) à caixa para o seu usuário."]
+    passos.append(f"Caixa de Entrada aberta ({total} itens)")
+    enviados = _pasta_enviados_irma(entrada)
+    if enviados is None:
+        try:
+            irmas = [p.Name for p in entrada.Parent.Folders]
+        except Exception as erro:
+            irmas = [f"(não consegui listar: {erro})"]
+        return entrada, None, passos + [
+            "não achei a pasta de Itens Enviados dessa caixa. Pastas encontradas no mesmo nível: "
+            + (", ".join(irmas) if irmas else "(nenhuma)")]
+    passos.append(f"Itens Enviados encontrados ({enviados.Name})")
+    return entrada, enviados, passos
 
 
 def abrir_pastas(ns):
     loja = localizar_loja(ns, LOJA)
     if loja is not None:
         return loja.GetDefaultFolder(PASTA_ENTRADA), loja.GetDefaultFolder(PASTA_ENVIADOS)
-    alternativa = _por_caixa_compartilhada(ns)
-    if alternativa is not None:
-        return alternativa
+    entrada, enviados, passos = diagnosticar_caixa_compartilhada(ns, CAIXA_EMAIL)
+    if entrada is not None and enviados is not None:
+        return entrada, enviados
     encontradas = nomes_das_caixas(ns)
     raise RuntimeError(
         f"Armazenamento '{LOJA}' não encontrado no perfil do Outlook. "
         f"Caixas encontradas: {', '.join(encontradas) if encontradas else '(nenhuma)'}. "
-        "Confira o nome exato em Configurações (copie como aparece no painel esquerdo do Outlook). "
-        "Se a caixa estiver aberta só por permissão (sem aparecer como conta própria), preencha também "
-        "o e-mail dela em Configurações.")
+        "Confira o nome exato em Configurações (copie como aparece no painel esquerdo do Outlook).\n"
+        f"Tentativa pelo e-mail da caixa: {' | '.join(passos)}")
 
 
 def indexar(pasta, rotulo, corte):

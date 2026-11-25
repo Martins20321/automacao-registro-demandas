@@ -25,6 +25,7 @@ O programa abre sozinho a tela **Configurações**. Preencha:
 | Campo | O que é |
 |---|---|
 | Nome da caixa compartilhada | Exatamente como aparece no painel esquerdo do Outlook clássico. |
+| E-mail da caixa | Opcional. Só preencha se a caixa **não** aparecer como uma conta própria no Outlook (aberta apenas por permissão). |
 | Domínio dos e-mails internos | Por exemplo `@orgao.gov.br`. |
 | Cliente de demandas externas de Consultas Públicas | Pessoa/grupo que o SharePoint reconhece pelo nome. |
 | Cliente de demandas externas do portal | Idem, para o portal. |
@@ -32,7 +33,8 @@ O programa abre sozinho a tela **Configurações**. Preencha:
 | Categorias a ignorar | Opcional. Categorias do Outlook que não são nome de estagiário. |
 | Chave da API do Groq | Grátis em https://console.groq.com/keys. Fica só no seu computador. |
 
-Clique em **Editar lista de estagiários** e informe nome (**sem acento**) e e-mail de cada pessoa.
+Clique em **Editar lista de estagiários** e informe nome e e-mail de cada pessoa (o nome pode ter
+acento: o programa compara ignorando isso).
 Clique em **Testar instalação** para conferir o OCR, a lista, a chave e o acesso ao Outlook.
 Ao salvar, o programa reabre sozinho.
 
@@ -70,7 +72,7 @@ Ao salvar, o programa reabre sozinho.
 
 | Problema | O que fazer |
 |---|---|
-| Aviso "Armazenamento … não encontrado" | A caixa não está no perfil do Outlook clássico, ou o nome em Configurações difere do painel do Outlook. |
+| Aviso "Armazenamento … não encontrado" | A mensagem lista as caixas que o Outlook encontrou: copie o nome exato de uma delas para Configurações. Se a caixa só aparecer por permissão (sem ser uma conta própria no painel), preencha também o **e-mail da caixa** em Configurações. |
 | "Verifique se o Outlook clássico está aberto" | Abra o Outlook clássico (o novo Outlook não serve) e tente de novo. |
 | Parece parado | A leitura do Outlook e a IA levam alguns minutos. Se o Outlook pedir permissão de acesso, clique em permitir. |
 | Limite de requisições do Groq | Normal no plano gratuito: o programa espera e tenta de novo sozinho. |

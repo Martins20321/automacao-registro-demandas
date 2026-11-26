@@ -13,10 +13,11 @@ from typing import Protocol
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from . import envfile
+from . import envfile, rede
 from .config import ARQUIVO_ENV
 from .modelos import AnaliseIA, MensagemConversa
 from .progresso import emitir
+from .rede import ErroConexaoIA
 
 INSTRUCOES = """Você analisa conversas de e-mail do suporte de TI do Ministério de Minas e Energia (MME).
 A equipe cuida do portal institucional (Plone, chamado "Portal") e do sistema de Consultas Públicas.
@@ -118,13 +119,27 @@ class ProvedorGroq:
         chave = _obter_chave()
         if not chave:
             raise RuntimeError("GROQ_API_KEY não definida. Preencha o arquivo .env (veja .env.example).")
+        import httpx
         from groq import Groq
-        self.cliente = Groq(api_key=chave)
+        self.chave = chave
+        # Cliente que respeita proxy e certificados do Windows. O tempo de conexão é generoso porque o
+        # handshake com a IA chegou a levar mais de 11 s (o padrão do SDK, 5 s, dava "Request timeout").
+        self.http = rede.criar_cliente_http()
+        self.cliente = Groq(api_key=chave, http_client=self.http, max_retries=1,
+                            timeout=httpx.Timeout(rede.TEMPO_RESPOSTA, connect=rede.TEMPO_CONEXAO))
         self.modelo = os.getenv("GROQ_MODEL", MODELO_PADRAO)
 
+    def verificar_conexao(self):
+        """Falha logo, com mensagem clara, se a rede bloqueia a IA; também aquece a conexão."""
+        ok, detalhe = rede.testar_conexao(self.chave, cliente=self.http)
+        if not ok:
+            raise ErroConexaoIA(detalhe)
+        emitir(f"  IA: {detalhe}")
+
     def completar_json(self, instrucoes, conteudo):
-        from groq import RateLimitError
-        for tentativa in range(1, 5):
+        from groq import APIConnectionError, RateLimitError  # APITimeoutError é um APIConnectionError
+        falhas_conexao = 0
+        for tentativa in range(1, 6):
             try:
                 resposta = self.cliente.chat.completions.create(
                     model=self.modelo, temperature=0, response_format={"type": "json_object"},
@@ -132,11 +147,17 @@ class ProvedorGroq:
                               {"role": "user", "content": conteudo}])
                 return resposta.choices[0].message.content
             except RateLimitError:
-                if tentativa == 4:
+                if tentativa >= 4:
                     raise
                 espera = 15 * tentativa
                 emitir(f"  (limite de requisições do Groq; aguardando {espera}s)")
                 time.sleep(espera)
+            except APIConnectionError as erro:
+                falhas_conexao += 1
+                if falhas_conexao >= 2:
+                    raise ErroConexaoIA(rede.explicar_erro(erro)) from erro
+                emitir("  (a IA não respondeu; tentando de novo)")
+                time.sleep(2)
 
 
 def formatar_conversa(mensagens: list[MensagemConversa]) -> str:

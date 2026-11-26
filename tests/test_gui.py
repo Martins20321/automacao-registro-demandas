@@ -24,15 +24,25 @@ def test_texto_resultado_vazio_avisa_quando_a_caixa_de_entrada_veio_vazia():
     assert "Caixa de Entrada veio vazia" in texto
 
 
-@pytest.fixture
-def app():
+@pytest.fixture(scope="module")
+def _janela():
+    """Uma única janela para o módulo todo: criar/destruir várias raízes Tk no mesmo processo é instável."""
     try:
         janela = gui.App()
-    except tk.TclError:
-        pytest.skip("sem ambiente gráfico")
+    except tk.TclError as erro:
+        pytest.skip(f"sem ambiente gráfico: {erro}")
     janela.withdraw()
+    janela.data_padrao_inicial = janela.var_desde.get()
     yield janela
     janela.destroy()
+
+
+@pytest.fixture
+def app(_janela):
+    for w in list(_janela.winfo_children()):          # fecha diálogos deixados por testes anteriores
+        if isinstance(w, tk.Toplevel):
+            w.destroy()
+    return _janela
 
 
 def _dialogo_do_calendario(app):
@@ -43,7 +53,7 @@ def _dialogo_do_calendario(app):
 
 
 def test_data_padrao_e_hoje(app):
-    assert app.var_desde.get() == datetime.datetime.now().strftime("%d/%m/%Y")
+    assert app.data_padrao_inicial == datetime.datetime.now().strftime("%d/%m/%Y")
 
 
 def test_calendario_continua_aberto_ao_trocar_de_mes(app):

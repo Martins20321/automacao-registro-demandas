@@ -1,6 +1,7 @@
 """Verificação da instalação: Tesseract, OCR, configuração, lista de estagiários, chave e Outlook."""
-from . import config, ia
-from . import outlook
+import os
+
+from . import config, ia, outlook, rede
 from . import roster as lista
 
 
@@ -34,6 +35,8 @@ def executar():
     except Exception as erro:
         registrar("Lista de estagiários", False, str(erro)[:160])
     registrar("Chave da IA (Groq)", ia.chave_configurada(), "configurada" if ia.chave_configurada() else "não informada")
+    ok_rede, detalhe_rede = rede.testar_conexao(os.getenv("GROQ_API_KEY", "").strip())
+    registrar("Conexão com a IA (Groq)", ok_rede, detalhe_rede)
 
     try:
         import pythoncom

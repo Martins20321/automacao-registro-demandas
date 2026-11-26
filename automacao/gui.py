@@ -582,6 +582,7 @@ class App(tk.Tk):
             ("CLIENTE_PORTAL_EXTERNO", "Cliente de demandas externas do portal", False),
             ("LISTA_URL", "Endereço da lista do SharePoint (opcional)", False),
             ("CATEGORIAS_IGNORADAS", "Categorias do Outlook a ignorar, separadas por vírgula (opcional)", False),
+            ("HTTPS_PROXY", "Proxy da rede (opcional, ex.: http://proxy.orgao.gov.br:8080)", False),
             ("GROQ_API_KEY", "Chave da API do Groq (deixe em branco para manter a atual)", True),
         ]
         vars_ = {}

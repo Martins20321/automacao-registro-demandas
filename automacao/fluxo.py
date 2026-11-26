@@ -11,6 +11,7 @@ import win32com.client
 from . import duplicidade, ia, progresso
 from .busca import buscar
 from .conversa import montar_conversa
+from .rede import ErroConexaoIA
 from .registro import construir_demanda
 
 PAUSA_ENTRE_CHAMADAS = 1.5   # respeita o limite de requisições do plano gratuito
@@ -61,16 +62,32 @@ def processar(operador, desde, roster, provedor, lista_csv="", margem_dias=90, v
         progresso.emitir(f"{total} conversa(s) de {operador['nome']} "
                          f"({descartadas} descartada(s) por assinatura de outra pessoa). Analisando com IA...")
 
+        verificar = getattr(provedor, "verificar_conexao", None)
+        if total and verificar:
+            progresso.emitir("Testando a conexão com a IA...")
+            verificar()          # falha logo, com explicação, se a rede bloqueia a IA
+
+        seguidas_sem_rede = 0
         for n, d in enumerate(demandas, 1):
             progresso.emitir(f"Analisando com IA: {n} de {total}")
             try:
                 registro, analise, mensagens, avisos = analisar_demanda(
                     ns, entrada, enviados, d, roster, provedor)
+            except ErroConexaoIA as erro:
+                seguidas_sem_rede += 1
+                resultado.falhas.append({"conclusao": d["conclusao"], "erro": str(erro)[:300]})
+                if seguidas_sem_rede >= 2:     # não adianta insistir: a rede está bloqueando a IA
+                    raise ErroConexaoIA(
+                        f"{erro}\n\nParei após {seguidas_sem_rede} falhas seguidas de conexão; "
+                        f"as demais conversas não foram analisadas.") from erro
+                continue
             except Exception as erro:
+                seguidas_sem_rede = 0
                 resultado.falhas.append({"conclusao": d["conclusao"], "erro": str(erro)[:150]})
                 continue
             finally:
                 time.sleep(PAUSA_ENTRE_CHAMADAS)
+            seguidas_sem_rede = 0
             if registro is None:
                 assunto = next((m.assunto for m in mensagens if m.direcao == "recebida"), "")
                 resultado.ignoradas.append({"tipo": analise.tipo, "conclusao": d["conclusao"],

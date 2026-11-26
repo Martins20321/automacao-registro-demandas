@@ -31,6 +31,7 @@ O programa abre sozinho a tela **Configurações**. Preencha:
 | Cliente de demandas externas do portal | Idem, para o portal. |
 | Endereço da lista do SharePoint | Opcional. Se informado, o botão "Abrir a lista" aparece no final. |
 | Categorias a ignorar | Opcional. Categorias do Outlook que não são nome de estagiário. |
+| Proxy da rede | Opcional. Só se a internet do órgão passa por um proxy (ex.: `http://proxy.orgao.gov.br:8080`). Sem isso, usa o proxy do Windows quando houver. |
 | Chave da API do Groq | Grátis em https://console.groq.com/keys. Fica só no seu computador. |
 
 Clique em **Editar lista de estagiários** e informe nome e e-mail de cada pessoa (o nome pode ter
@@ -76,6 +77,7 @@ Ao salvar, o programa reabre sozinho.
 | "Verifique se o Outlook clássico está aberto" | Abra o Outlook clássico (o novo Outlook não serve) e tente de novo. |
 | Parece parado | A leitura do Outlook e a IA levam alguns minutos. Se o Outlook pedir permissão de acesso, clique em permitir. |
 | Limite de requisições do Groq | Normal no plano gratuito: o programa espera e tenta de novo sozinho. |
+| "Request timeout" / "Não consegui falar com a IA" | A conexão com `api.groq.com` está lenta ou bloqueada. Rode **Configurações > Testar instalação** e veja a linha *Conexão com a IA*: ela mostra o tempo e se há proxy. Se a rede usa proxy, informe-o em Configurações. Se o TI bloqueia o endereço, peça a liberação de `api.groq.com` (porta 443). A conexão pode levar mais de 10 s para abrir, mas depois as chamadas são rápidas. |
 | "não confere com o e-mail" | O nome ou o e-mail diferem da lista de estagiários (Configurações > Editar lista). |
 | Assinatura não reconhecida (REVISAR) | O OCR não leu o nome com segurança. Confira o responsável. |
 | Erro inesperado | O detalhe fica em `saida\erro.log` (botão *Pasta dos arquivos*). |
